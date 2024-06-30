@@ -1,38 +1,54 @@
 //This program is meant to scan for all files in a folder including subfolders and move all files to one folder, thus destroying the original file structure.
 //Usage [options] "source" "destination".
 //Options --help to print help;;; --no-rewrite. to append numbers to files with similar names
-fn main() {
-    use std::fs;
+use std::fs;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 use fs_extra::file::{move_file, CopyOptions};
-use clap::{Arg, App};
+use clap::{Arg, Command};
 
 fn main() {
-    let matches = App::new("File Mover")
+    let matches = Command::new("File Structure Destroyer")
         .version("1.0")
-        .author("Your Name <your.email@example.com>")
-        .about("Moves files from source directory to destination directory")
+        .author("..")
+        .about("This program is meant to scan for all files in a folder including subfolders and move all files to one folder, thus destroying the original file structure.")
         .arg(Arg::new("source")
-            .about("The source directory to scan")
+            .help("The source directory to scan")
             .required(true)
             .index(1))
         .arg(Arg::new("destination")
-            .about("The destination directory")
+            .help("The destination directory")
             .required(true)
             .index(2))
-        .arg(Arg::new("no-rewrite")
-            .about("Appends numbers to filenames if they already exist in the destination")
+        .arg(Arg::new("--no-rewrite")
+            .help("Appends numbers to filenames if they already exist in the destination")
             .long("no-rewrite"))
         .get_matches();
 
-    let source_dir = matches.value_of("source").unwrap();
-    let dest_dir = matches.value_of("destination").unwrap();
-    let no_rewrite = matches.is_present("no-rewrite");
-
+    let source_dir:String;
+    match  matches.get_one::<& str>("source") {
+        Some(source)=>{source_dir = source.to_string()}, 
+        None =>{
+            println!("No source specified");
+            return; //Error handling
+        }
+    }
+    let dest_dir:String  ;
+    match matches.get_one::<& str>("destination") {
+        Some(dest)=>{dest_dir = dest.to_string()}, 
+        None =>{
+            println!("No destination specified");
+            return; //Error handling
+        }
+    }
+    let no_rewrite = matches.get_flag("--no-rewrite");
+    let dest_dir_copy = dest_dir.as_str();
     // Create destination directory if it doesn't exist
-    if !Path::new(dest_dir).exists() {
-        fs::create_dir_all(dest_dir).expect("Failed to create destination directory");
+    if !Path::new(dest_dir_copy).exists() {
+        match fs::create_dir_all(dest_dir_copy) {
+            Ok(_)=>{println!("Created destination directory")}
+            Err(err)=>{println!("{err}")}
+        }
     }
 
     // Iterate over all files in the source directory and its subdirectories
@@ -40,24 +56,29 @@ fn main() {
         let path = entry.path();
         if path.is_file() {
             let file_name = path.file_name().expect("Failed to get file name");
-            let mut dest_path = PathBuf::from(dest_dir).join(file_name);
-
+            let mut dest_path = PathBuf::from(dest_dir.clone()).join(file_name);
+            
+            //if no reqrite was specified then get a unique numbered file name
             if no_rewrite {
                 dest_path = get_unique_file_path(&dest_path);
             }
 
             if dest_path.exists() && !no_rewrite {
-                eprintln!("File {:?} already exists and --no-rewrite not specified. Skipping.", dest_path);
+                println!("File {:?} already exists and --no-rewrite not specified. Skipping.", dest_path);
                 continue;
             }
 
             let options = CopyOptions::new();
-            move_file(path, &dest_path, &options).expect("Failed to move file");
+            //move the file and handle errors
+            match move_file(path, &dest_path, &options) {
+                Ok(_)=>{println!("Moved: {:?}",file_name)}
+                Err(err)=>{println!("{err}");}              
+            }
         }
     }
 
     // Optionally, you can remove the original directory structure
-    fs::remove_dir_all(source_dir).expect("Failed to remove source directory");
+    //fs::remove_dir_all(source_dir).expect("Failed to remove source directory");
 }
 
 fn get_unique_file_path(mut path: &PathBuf) -> PathBuf {
@@ -75,4 +96,3 @@ fn get_unique_file_path(mut path: &PathBuf) -> PathBuf {
     new_path
 }
 
-}
