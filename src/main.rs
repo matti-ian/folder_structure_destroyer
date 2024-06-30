@@ -38,7 +38,14 @@ fn main() {
         //match arguements
     let source_dir:String;
     match  matches.get_one::<String>("source") {
-        Some(source)=>{source_dir = source.to_string()}, 
+        Some(source)=>{
+            source_dir = source.to_string();
+            //check if source folder exists.
+            if !Path::new(source).exists(){
+                println!("Error: Source path cannot be found!");
+                return;
+            }
+        }, 
         None =>{
             println!("No source specified");
             return; //Error handling
