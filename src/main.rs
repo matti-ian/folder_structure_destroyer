@@ -5,7 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 use fs_extra::file::{move_file, CopyOptions};
-use clap::{Arg, Command};
+use clap::{Arg, ArgAction, Command};
 
 fn main() {
     let matches = Command::new("File Structure Destroyer")
@@ -22,11 +22,12 @@ fn main() {
             .index(2))
         .arg(Arg::new("--no-rewrite")
             .help("Appends numbers to filenames if they already exist in the destination")
-            .long("no-rewrite"))
+            .action(clap::ArgAction::SetTrue)            
+            .long("no-rewrite"))            
         .get_matches();
 
     let source_dir:String;
-    match  matches.get_one::<& str>("source") {
+    match  matches.get_one::<String>("source") {
         Some(source)=>{source_dir = source.to_string()}, 
         None =>{
             println!("No source specified");
@@ -34,7 +35,7 @@ fn main() {
         }
     }
     let dest_dir:String  ;
-    match matches.get_one::<& str>("destination") {
+    match matches.get_one::<String>("destination") {
         Some(dest)=>{dest_dir = dest.to_string()}, 
         None =>{
             println!("No destination specified");
